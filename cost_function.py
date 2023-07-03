@@ -61,5 +61,6 @@ w_index, b_index = np.where(costs == np.min(costs))
 print(np.min(costs))
 print("when w = ", ws[w_index], ", b = ", bs[b_index], "the cost is the smallest")
 ax.scatter(ws[w_index], bs[b_index], costs[w_index, b_index], color = "red", s = 40)
+print("seniority = 3.5y  salary = ", ws[w_index]*3.5 + bs[b_index], "K")
 
 plt.show()
