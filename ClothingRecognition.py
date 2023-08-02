@@ -28,7 +28,7 @@ test_data = datasets.FashionMNIST(
     transform=ToTensor())   # image -> tensor
 
 # show images
-random_idx = random.randint(0, len(train_data))
+random_idx = random.randint(0, len(train_data)-1)
 img, label = train_data[random_idx]
 class_names = train_data.classes
 class_names[label]
@@ -41,4 +41,27 @@ len(train_data), len(test_data)
 
 BATCH_SIZE = 32  # 32/64/128/256
 
-DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)   # Shuffle the training set data.
+train_dataloader = DataLoader(
+    train_data,
+    batch_size=BATCH_SIZE,
+    shuffle=True)   # Shuffle the training set data.
+
+test_dataloader = DataLoader(
+    test_data,
+    batch_size=BATCH_SIZE,
+    shuffle=False)   # Shuffle the testing set data.
+
+len(train_dataloader), len(test_dataloader)
+
+# iterable = can inspect in a loop
+#qq = [1, 2, 3]
+#qq_iterator = iter(qq)
+#next(qq_iterator) 1 -> 2 -> 3
+
+x_first_batch, y_first_batch = next(iter(train_dataloader))
+
+random_idx = random.randint(0, len(x_first_batch)-1)
+img, label = x_first_batch[random_idx], y_first_batch[random_idx]
+
+plt.imshow(img.permute(1, 2, 0))
+plt.title(class_names[label])
