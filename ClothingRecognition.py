@@ -13,6 +13,8 @@ from torchvision.transforms import ToTensor   # img -> tensor
 import matplotlib.pyplot as plt
 import random
 from torch.utils.data import DataLoader  # batch
+from torch import nn
+import torch
 
 
 train_data = datasets.FashionMNIST(
@@ -58,10 +60,51 @@ len(train_dataloader), len(test_dataloader)
 #qq_iterator = iter(qq)
 #next(qq_iterator) 1 -> 2 -> 3
 
-x_first_batch, y_first_batch = next(iter(train_dataloader))
+x_first_batch, y_first_batch = next(iter(train_dataloader))   # x=graph, y=label
+#x_first_batch.shape, y_first_batch.shape
 
 random_idx = random.randint(0, len(x_first_batch)-1)
 img, label = x_first_batch[random_idx], y_first_batch[random_idx]
 
 plt.imshow(img.permute(1, 2, 0))
 plt.title(class_names[label])
+
+# graph have 3 dim -> faltten = 1 dim -> nn
+#x_first_batch[0].shape
+f = nn.Flatten(start_dim=0, end_dim=-1)
+f(x_first_batch[0]).shape   # 28pixel*28pixel = 784pixel
+
+# Define the nn
+# too complex!
+# class ImageClassificationModel(nn.Module):
+#   def __init__(self):
+#     super().__init__()
+#     self.flatten = nn.Flatten(start_dim=0, end_dim=-1)
+#     self.linear_layer = nn.Linear(in_features=784, out_features=10) # in_features = 784 ->  nn.Flatten = 1*18*18 = 784, out_feature = 10 -> There are ten labels in FasionMNIST
+#     self.softmax = nn.Softmax(dim=0)
+
+#   def forward(self, x):
+#     return self.softmax(self.linear_layer(self.flatten(x)))
+
+# Another syntax
+# single graph -> batch
+class ImageClassificationModel(nn.Module):
+  def __init__(self, input_shape, output_shape):
+    super().__init__()
+    self.layer_stack = nn.Sequential(
+      nn.Flatten(start_dim=1, end_dim=-1),
+      nn.Linear(in_features=input_shape, out_features=output_shape), # in_features = 784 ->  nn.Flatten = 1*18*18 = 784, out_feature = 10 -> There are ten labels in FasionMNIST
+      nn.Softmax(dim=1)
+    )
+
+  def forward(self, x):
+    return self.layer_stack(x)
+
+x_first_batch, y_first_batch = next(iter(train_dataloader))   # x=graph, y=label
+
+# https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html#torch.nn.Softmax
+torch.manual_seed(87)
+model = ImageClassificationModel(28*28, 10)
+y_pred = model(x_first_batch)
+#y_pred.sum(dim=1) # Ensure the sum is one
+#y_pred.argmax(dim=1)
