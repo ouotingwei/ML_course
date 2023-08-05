@@ -15,6 +15,7 @@ import random
 from torch.utils.data import DataLoader  # batch
 from torch import nn
 import torch
+from tqdm.auto import tqdm
 
 
 train_data = datasets.FashionMNIST(
@@ -94,7 +95,7 @@ class ImageClassificationModel(nn.Module):
     self.layer_stack = nn.Sequential(
       nn.Flatten(start_dim=1, end_dim=-1),
       nn.Linear(in_features=input_shape, out_features=output_shape), # in_features = 784 ->  nn.Flatten = 1*18*18 = 784, out_feature = 10 -> There are ten labels in FasionMNIST
-      nn.Softmax(dim=1)
+      # nn.Softmax(dim=1)   # nn.CrossEntropyLoss()
     )
 
   def forward(self, x):
@@ -108,3 +109,81 @@ model = ImageClassificationModel(28*28, 10)
 y_pred = model(x_first_batch)
 #y_pred.sum(dim=1) # Ensure the sum is one
 #y_pred.argmax(dim=1)
+
+# https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html#torch.nn.CrossEntropyLoss
+# cost function
+cost_fn = nn.CrossEntropyLoss()
+y_pred = model(x_first_batch)
+cost = cost_fn(y_pred, y_first_batch) # do Softmax two times
+print(cost)
+print(model.state_dict())
+
+optimizer = torch.optim.SGD(params=model.parameters(), lr=0.01)
+optimizer.zero_grad()
+cost.backward()
+optimizer.step()
+
+y_pred = model(x_first_batch)
+cost = cost_fn(y_pred, y_first_batch)
+print(cost)
+print(model.state_dict())
+
+def accuracy_fn(y_pred, y_true):
+  correct_num = (y_pred==y_true).sum()
+  acc = correct_num / len(y_true) * 100
+
+  return acc
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model.to(device)
+
+epochs = 3
+
+for epoch in tqdm(range(epochs)):
+  print(f"Epoch:  {epoch}\n---------")
+
+  train_cost = 0
+  train_acc = 0
+  for batch, (x, y) in enumerate(train_dataloader):
+    x = x.to(device)  # to cuda
+    y = y.to(device)
+
+    model.train()
+
+    y_pred = model(x)
+
+    cost = cost_fn(y_pred, y)
+
+    train_cost += cost
+    train_acc += accuracy_fn(y_pred.argmax(dim=1), y)
+
+    optimizer.zero_grad()
+
+    cost.backward()
+
+    optimizer.step()
+
+    if batch%500==0:
+      print(f"now data: {batch*len(x)}/{len(train_data)} data")
+
+  train_cost /= len(train_dataloader)
+  train_acc /= len(train_dataloader)
+
+  test_cost = 0
+  test_acc = 0
+  model.eval()
+  with torch.inference_mode():
+    for x, y in test_dataloader:
+      x = x.to(device)  # to cuda
+      y = y.to(device)
+
+      test_pred = model(x)
+      test_cost += cost_fn(test_pred, y)
+      test_acc += accuracy_fn(test_pred.argmax(dim=1), y)
+
+    test_cost /= len(test_dataloader)
+    test_acc /= len(test_dataloader)
+
+
+  print(f"\nTrain Cost:   {train_cost:.4f},   Train Acc:  {train_acc:.4f} ")
+  print(f"\nTest Cost:   {test_cost:.4f},   Test Acc:  {test_acc:.4f} \n")
